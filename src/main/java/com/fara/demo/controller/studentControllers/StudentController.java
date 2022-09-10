@@ -6,71 +6,60 @@ import com.fara.demo.domain.Course;
 import com.fara.demo.domain.Exam;
 import com.fara.demo.domain.User;
 import com.fara.demo.domain.answer.BaseStudentAnswer;
+import com.fara.demo.repository.UserRepository;
 import com.fara.demo.service.StudentServiceApi;
+import com.fara.demo.service.UserServiceApi;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
-@Controller
+@RestController
 @RequestMapping("/student")
-@PreAuthorize("hasRole('ROLE_STUDENT')")
+//@PreAuthorize("hasRole('ROLE_STUDENT')")
 public class StudentController {
-
+    private final UserRepository userRepository;
     private final StudentServiceApi studentService;
 
     @Autowired
-    public StudentController(StudentServiceApi studentService) {
+    public StudentController( UserRepository userRepository, StudentServiceApi studentService) {
+        this.userRepository = userRepository;
         this.studentService = studentService;
     }
 
-    @GetMapping({"/", ""})
-    String getPanel(Model model) {
+    @GetMapping({"/courses/{studentId}", "courses/{studentId}"})
+    List<Course> getCourses(@PathVariable Long studentId) {
 
         try {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            ApplicationUserDetails requestedUser =
-                    ((ApplicationUserDetails) authentication.getPrincipal());
-            String fullName = requestedUser.getUser().getFullName();
-            User student = requestedUser.getUser();
-            model.addAttribute("fullName", fullName);
-            List<Course> courseList = studentService.getStudentCourses(student);
-            model.addAttribute("courseList", courseList);
+            Optional<User> byId = userRepository.findById(studentId);
+            if (byId.isPresent()) {
+                List<Course> studentCourses = studentService.getStudentCourses(byId.get());
+                return studentCourses;
+            }
         } catch (Exception e) {
-            e.printStackTrace();
-            model.addAttribute("error", e.getMessage());
+            throw new RuntimeException(e);
         }
-
-        return "student/student";
+        return null;
     }
-
-    @GetMapping("view-exams/{courseId}")
-    String getExams(Model model, @PathVariable Long courseId) {
+        @GetMapping("view-exams/{courseId}")
+        List<Exam> getExams( @PathVariable Long courseId) {
 
         try {
             List<Exam> courseExams = studentService.getCourseExams(courseId);
-            model.addAttribute("examList", courseExams);
+            return courseExams;
         } catch (IllegalStateException e) {
             e.printStackTrace();
-            model.addAttribute("err", e.getMessage());
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            model.addAttribute("error", e.getMessage());
+        }
+            return null;
         }
 
-        return "student/view-exams";
-    }
-
     @GetMapping("take-exam/{examId}")
-    String takeExam(Model model, @PathVariable Long examId) {
+    List<BaseStudentAnswer> takeExam( @PathVariable Long examId) {
 
         try {
             Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -79,25 +68,18 @@ public class StudentController {
             List<BaseStudentAnswer> studentExamQuestions = studentService.getStudentExamQuestion(user, examId);
 
             LocalDateTime finishTime = studentService.getFinishTime(user, examId);
-            model.addAttribute("questionList", studentExamQuestions);
-
-            model.addAttribute("finishTime", finishTime);
-
-        } catch (IllegalStateException e) {
-            e.printStackTrace();
-            model.addAttribute("err", e.getMessage());
+            return studentExamQuestions;
 
         } catch (Exception e) {
             e.printStackTrace();
-            model.addAttribute("error", e.getMessage());
+
         }
 
-        return "student/take-exam";
+       return null;
     }
 
     @PostMapping("answer/{studentAnswerId}/{examId}")
-    String getAnswers(
-            Model model,
+    void getAnswers(
             @PathVariable("examId") Long examId,
             @PathVariable("studentAnswerId") Long studentAnswerId,
             @RequestParam(value = "optionId", required = false) Long optionId,
@@ -109,19 +91,16 @@ public class StudentController {
 
         } catch (IllegalStateException e) {
             e.printStackTrace();
-            model.addAttribute("err", e.getMessage());
+
 
         } catch (Exception e) {
             e.printStackTrace();
-            model.addAttribute("error", e.getMessage());
-        }
 
-        return "redirect:/student/take-exam/{examId}";
+        }
     }
 
     @PostMapping("finish-exam")
-    String finishExam(
-            RedirectAttributes redirectAttributes,
+    void finishExam(
             @RequestParam("examId") Long examId,
             @RequestParam("studentId") Long studentId,
             @RequestParam("courseId") Long courseId) {
@@ -129,21 +108,13 @@ public class StudentController {
 
         try {
 
-            System.out.println(studentId);
-            System.out.println(examId);
-
             studentService.finishExam(examId, studentId);
-            redirectAttributes.addFlashAttribute("success","exam finished successfully");
-        } catch (IllegalStateException e) {
-            e.printStackTrace();
-            redirectAttributes.addFlashAttribute("err", e.getMessage());
 
-        } catch (Exception e) {
+        }  catch (Exception e) {
             e.printStackTrace();
-            redirectAttributes.addFlashAttribute("error", e.getMessage());
+
         }
 
-        return "redirect:/student/view-exams/" + courseId;
     }
 
 }

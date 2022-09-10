@@ -206,20 +206,18 @@ public class TutorController {
 
     //            '/new-questions-bank/{examId}'
     @GetMapping("new-questions-bank/{examId}")
-    String createQuestionForExamFromBank(
-            @PathVariable("examId") Long examId,
-            Model model) {
+    void createQuestionForExamFromBank(
+            @PathVariable("examId") Long examId) {
         try {
             List<BaseQuestion> search = questionServiceApi.findQuery("", "all", examId);
             if (search.size() == 0) throw new Exception("no results found");
-            model.addAttribute("search", search);
+
         } catch (Exception e) {
             e.printStackTrace();
-            model.addAttribute("error", "something went wrong " + e.getMessage());
         }
 
-        model.addAttribute("examId", examId);
-        return "teacher/new-questions-bank";
+
+
     }
 
     @PostMapping("/search-questions/{examId}")
@@ -247,71 +245,42 @@ public class TutorController {
 
     //@{'/tutor/select-question-bank/' +${question.id}+'/'+${examId}
     @GetMapping("/select-question-bank/{questionId}/{examId}")
-    String selectQuestionForExamFromBankSearch(
+    BaseQuestion selectQuestionForExamFromBankSearch(
             @PathVariable("examId") Long examId,
-            @PathVariable("questionId") Long questionId,
-//            @RequestParam(value = "query", required = false) String query,
-//            @RequestParam("type") String type,
-            Model model) {
+            @PathVariable("questionId") Long questionId) {
 
-//        try {
-//            List<BaseQuestion> search = questionServiceApi.findQuery(query, type, examId);
-//            if (search.size() == 0) throw new Exception("no results found");
-//            model.addAttribute("search", search);
-//        } catch (IllegalStateException e) {
-//            model.addAttribute("err", "something went wrong " + e.getMessage());
-//            e.printStackTrace();
-//        } catch (Exception e) {
-//            model.addAttribute("error", "something went wrong " + e.getMessage());
-//            e.printStackTrace();
-//        }
 
         Optional<BaseQuestion> byId = questionServiceApi.findById(questionId);
         BaseQuestion baseQuestion = byId.get();
-        model.addAttribute("examId", examId);
-        model.addAttribute("question", baseQuestion);
 
-        return "teacher/new-questions-bank-point";
+        return baseQuestion;
     }
     //new-bank-question/121/77
     //@{'~/tutor/new-bank-question/' +${question.id}+'/' +${examId}  }
 
     @PostMapping("/new-bank-question/{questionId}/{examId}")
-    String assignPointQuestionForExamFromBankSearch(
+    void assignPointQuestionForExamFromBankSearch(
             @PathVariable("examId") Long examId,
             @PathVariable("questionId") Long questionId,
-            @RequestParam(value = "points", required = false) Integer points,
-            Model model) {
+            @RequestParam(value = "points", required = false) Integer points
+            ) {
         try {
             questionServiceApi.selectQuestionFromBank(examId, questionId, points);
-            model.addAttribute("success", "question successfully added");
+
         } catch (IllegalStateException e) {
             e.printStackTrace();
-            model.addAttribute("err", "something went wrong " + e.getMessage());
+
 
         } catch (Exception e) {
             e.printStackTrace();
-            model.addAttribute("error", "something went wrong " + e.getMessage());
+
         }
         Optional<BaseQuestion> byId = questionServiceApi.findById(questionId);
         BaseQuestion baseQuestion = byId.get();
-        model.addAttribute("examId", examId);
-        model.addAttribute("question", baseQuestion);
 
-        return "teacher/new-questions-bank-point";
+
     }
 
-    //--------------------------------------------------------------------------------
-
-    //            '/new-multi-option/{examId}'
-    @GetMapping("new-multi-option/{examId}")
-    String createMultiOptionQuestionForExam(
-            @PathVariable("examId") Long examId,
-            Model model) {
-        model.addAttribute("created", false);
-        model.addAttribute("examId", examId);
-        return "teacher/new-multi-option";
-    }
 
     @PostMapping("new-multi-option/{examId}")
     ExamQuestionsPoints postCreateMultiOptionQuestionForExam(
@@ -375,38 +344,14 @@ public class TutorController {
         return null;
     }
 
-    ///edit-question/152
 
-    @GetMapping("edit-question/{questionId}")
-    String editQuestions(
-            @PathVariable("questionId") Long questionId,
-            Model model) {
-
-        Optional<BaseQuestion> byId = questionServiceApi.findById(questionId);
-        if (byId.isEmpty()) {
-            throw new IllegalStateException(" question not found ");
-        }
-
-        BaseQuestion baseQuestion = byId.get();
-        model.addAttribute("question", baseQuestion);
-        if (baseQuestion.getQuestionType().equals("MultiOptionQuestion")) {
-            return "teacher/edit-multi-question";
-        } else {
-            return "teacher/edit-essay-question";
-        }
-    }
-//title
-//prompt
-//answer
-
-    @PostMapping("edit-question/{questionId}")
-    String editQ(
+    @PutMapping("edit-question/{questionId}")
+    void editQ(
             @PathVariable("questionId") Long questionId,
             @RequestParam("title") String title,
             @RequestParam(value = "answer", required = false) Long answer,
-            @RequestParam("prompt") String prompt,
-            RedirectAttributes redirectAttributes,
-            Model model) {
+            @RequestParam("prompt") String prompt
+            ) {
         try {
             questionServiceApi.editQuestion(
                     questionId,
@@ -414,20 +359,10 @@ public class TutorController {
                     Optional.ofNullable(answer),
                     prompt
             );
-            redirectAttributes.addFlashAttribute("success", "editing successful");
+
         } catch (IllegalStateException e) {
-            redirectAttributes.addFlashAttribute("err", "something went wrong " + e.getMessage());
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("error", "something went wrong " + e.getMessage());
+           e.getMessage();
         }
-//        System.out.println(
-//                "questionId="+questionId+" "+
-//                "title="+title+" "+
-//                "answer="+answer+" "+
-//                "prompt="+prompt);
-
-
-        return "redirect:/tutor/edit-question/" + questionId;
     }
 
     //                           th:href="@{'/tutor/edit-question/' +${question.baseQuestion.id}}">edit</a><br>
