@@ -18,10 +18,11 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/admin")
-@PreAuthorize("hasRole('ROLE_ADMIN')")
+//@PreAuthorize("hasRole('ROLE_ADMIN')")
 @AllArgsConstructor
 public class AdminController {
 
@@ -31,7 +32,7 @@ public class AdminController {
     final CourseRepository courseRepository;
 
     @GetMapping({"", "/"})
-    List<User> getPanel() {
+    List<User> findAllUsers() {
         List<User> users = userServiceApi.findAll();
         try {
             if (users.size() == 0) {
@@ -43,25 +44,28 @@ public class AdminController {
         }
         return users;
     }
+    @GetMapping("/{id}")
+    public User findUserById(@PathVariable("id") Long id  ) throws Exception {
 
 
-    @GetMapping("/edit/{id}")
-    public String edit(@PathVariable("id") Long id, Model model) {
         try {
+            Optional<User> byId= byId = userRepository.findById(id);
 
-            Optional<User> byId = userRepository.findById(id);
             if (byId.isPresent()) {
-                model.addAttribute("user", byId.get());
-                return "edit";
-            } else model.addAttribute("error", " user not found ");
+                User user = byId.get();
+
+                return user;
+            }
         } catch (Exception e) {
-            model.addAttribute("error", "something went wrong " + e.getMessage());
+           throw new Exception( "something went wrong " + e.getMessage());
         }
-        return "edit";
+
+        return null;
     }
 
+
     @GetMapping("/accept/{id}")
-    public String accept(@PathVariable("id") Long id, Model model) {
+    public User accept(@PathVariable("id") Long id ) {
         try {
 
             Optional<User> byId = userRepository.findById(id);
@@ -69,40 +73,37 @@ public class AdminController {
                 User user = byId.get();
                 user.setEnable(true);
                 userRepository.save(user);
-                return "redirect:/admin";
-            } else model.addAttribute(
-                    "error", " user not found ");
+                return user;
+            } else throw new Exception(" user not found ");
         } catch (Exception e) {
-            model.addAttribute("error", "something went wrong " + e.getMessage());
+            e.getMessage();
         }
-        return "redirect:/admin";
+        return null;
     }
 
 
-    @GetMapping("/edit-course/{id}")
-    public String editCourse(
-            @PathVariable("id") Long id,
-            Model model
-    ) {
+    @PutMapping("/edit-course")
+    public Set<User> editCourse(@RequestBody Course course) {
         try {
-            Optional<Course> byId = courseRepository.findById(id);
+            Optional<Course> byId = courseRepository.findById(course.getId());
             if (byId.isPresent()) {
-                model.addAttribute("course", byId.get());
-                model.addAttribute("listUser", byId.get().getStudents());
+                Course course1 = byId.get();
+             Set<User> studens= course1.getStudents();
+             return studens;
             } else
-                model.addAttribute("error", " course not found ");
+                throw new Exception( " course not found ");
         } catch (Exception e) {
             e.printStackTrace();
-            model.addAttribute("error", "something went wrong " + e.getMessage());
+
         }
-        return "course-edit";
+        return null;
     }
 
     @GetMapping("courses")
-    public String getCources(Model model) {
+    public List<Course> getCourses() {
         List<Course> all = ((List<Course>) courseRepository.findAll());
-        model.addAttribute("courseList", all);
-        return "courses";
+
+        return all;
     }
 
 
@@ -121,32 +122,29 @@ public class AdminController {
 
         return aCourse;
     }
-
-
-    @PostMapping("/search-course")//assign
-    public String getSearchCourse(
+    @PutMapping("/assign-course")//assign
+    public Course assignCourse(
             @RequestParam("courseId") Long courseId,
-            @RequestParam("userId") Long userId,
-            Model model) {
+            @RequestParam("userId") Long userId
+         ) {
         try {
             Optional<Course> byId1 = courseRepository.findById(courseId);
             Optional<User> byId = userRepository.findById(userId);
             if (byId.isPresent() && byId1.isPresent()) {
                 User student = byId.get();
-                model.addAttribute("user", student);
                 Course course = byId1.get();
                 course.getStudents().add(student);
                 courseRepository.save(course);
-                model.addAttribute("course", course);
 
-                return "edit";
+
+                return course;
             } else {
-                model.addAttribute("error search failed");
+                throw new Exception("error search failed");
             }
         } catch (Exception e) {
-            model.addAttribute("error " + e.getMessage());
+            e.getMessage();
         }
-        return "edit";
+        return null;
     }
 
     @PutMapping("/edit-user/{id}")//assign
@@ -170,99 +168,6 @@ public class AdminController {
         return user;
     }
 
-    @PostMapping("search-user")//assign
-    public String searchUsers(
-            @RequestParam("field") UserFields fields,
-            @RequestParam("query") String query,
-            @RequestParam("role") Roles role,
-            @RequestParam("enable") boolean enable,
-            Model model,
-            RedirectAttributes redirectAttributes
-
-    ) {
-
-        System.out.println("hi");
-
-        System.out.println(
-                "fields:" + fields + " " +
-                        "query:" + query + " " +
-                        "role:" + role + " " +
-                        "enable:" + enable + " "
-        );
-
-//        try {
-//            List<User> users = userServiceApi.searchWithFieldsAndRoleAndStatusEnablity(fields,
-//                    query,
-//                    role,
-//                    enable);
-//            if (users.size() == 0) {
-//                throw new Exception(" no users found ");
-//            }
-//            redirectAttributes.addFlashAttribute("listUser", users);
-//            return "redirect:/admin";
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//             redirectAttributes.addFlashAttribute("error", " some thing went wrong " + e.getMessage());
-//            return "redirect:/admin";
-//        }
-        return "redirect:/admin";
-
-    }
-
-    @GetMapping("search-user")//assign
-    public String searchGetUsers(
-    ) {
-
-        return "redirect:/admin";
-    }
-
-    @PostMapping("search-for-users")//assign
-    public String searchForUsers(
-            @RequestParam(value = "field", required = false) UserFields fieldss,
-            @RequestParam(value = "query", required = false) String queryy,
-            @RequestParam(value = "role", required = false) Roles rolee,
-            @RequestParam(value = "enable", required = false) Boolean enablee,
-            Model model,
-            RedirectAttributes redirectAttributes
-
-    ) {
-        Optional<UserFields> fields = Optional.ofNullable(fieldss);
-        Optional<String> query = Optional.ofNullable(queryy);
-        Optional<Roles> role = Optional.ofNullable(rolee);
-        Optional<Boolean> enable = Optional.ofNullable(enablee);
-        System.out.println("hi");
-
-        System.out.println(
-                "fields:" + fields + " " +
-                        "query:" + query + " " +
-                        "role:" + role + " " +
-                        "enable:" + enable + " "
-        );
-
-
-        try {
-            List<User> users = userServiceApi.searchWithFieldsAndRoleAndStatusEnablity(fields,
-                    query,
-                    role,
-                    enable);
-
-            if (users == null) throw new Exception(" no users found ");
-
-            if (users.isEmpty()) throw new Exception(" no users found ");
-
-            if (users.size() == 0) {
-                throw new Exception(" no users found ");
-            }
-            model.addAttribute("listUser", users);
-            return "admin";
-        } catch (Exception e) {
-            e.printStackTrace();
-            model.addAttribute("error", " some thing went wrong " + e.getMessage());
-            return "admin";
-        }
-
-
-    }
 
 
     //1 course - edit html
@@ -270,24 +175,20 @@ public class AdminController {
 //    @{'/admin/remove-stuedent/' +${user.id}}+'/course/'+${course.id}
     private final AdminServiceApi adminServiceApi;
 
-    @GetMapping("remove-stuedent/{studentId}/course/{courseId}")//assign
+    @DeleteMapping("remove-stuedent/{studentId}/course/{courseId}")//assign
     public String searchGetUsers(
             @PathVariable("studentId") Long studentId,
-            @PathVariable("courseId") Long courseId,
-
-            RedirectAttributes redirectAttributes
+            @PathVariable("courseId") Long courseId
 
     ) {
 
         try {
 
             adminServiceApi.removeStudentFromCourse(studentId, courseId);
-            redirectAttributes.addFlashAttribute("success", "successful deleting student");
         } catch (Exception e) {
             e.printStackTrace();
-            redirectAttributes.addFlashAttribute("error", "something went wrong " + e.getMessage());
         }
-        return "redirect:/admin/edit-course/" + courseId;
+        return null;
     }
 
     //2   + assign new student
@@ -422,104 +323,27 @@ public class AdminController {
     }
 
 
-    //3
-// assign tutor to the course
-//    @{'~/admin/assign-tutor/'+${course.id}}///////////////////////
-    @GetMapping("/assign-tutor/{courseId}")
-    public String getForm(
+
+
+    @PostMapping("/assign-tutor-fin/{courseId}/{tutorId}")
+    public void assignTutor(
             @PathVariable("courseId") Long courseId,
-            @RequestParam(value = "field", required = false) UserFields fieldss,
-            @RequestParam(value = "query", required = false) String queryy,
-
-            Model model
-
-    ) {
-
-
-        model.addAttribute("courseId", courseId);
-        Optional<UserFields> fields = Optional.ofNullable(fieldss);
-        Optional<String> query = Optional.ofNullable(queryy);
-
-
+            @PathVariable("tutorId") Long tutorId) {
         try {
-            List<User> users = userServiceApi.searchWithFieldsAndRoleAndStatusEnablity(fields,
-                    query,
-                    Optional.of(Roles.TUTOR),
-                    Optional.of(true));
-            if (users == null) throw new Exception(" no users found ");
-
-            if (users.isEmpty()) throw new Exception(" no users found ");
-            if (users.size() == 0) {
-                throw new Exception(" no users found ");
-            }
-            model.addAttribute("listUser", users);
-        } catch (Exception e) {
-            e.printStackTrace();
-            model.addAttribute("error", " some thing went wrong " + e.getMessage());
-        }
-        return "assign-tutor";
-    }
-
-
-    @PostMapping("/assign-tutor/{courseId}")
-    public String getFormb(
-            @PathVariable("courseId") Long courseId,
-            @RequestParam(value = "field", required = false) UserFields fieldss,
-            @RequestParam(value = "query", required = false) String queryy,
-
-            Model model
-
-    ) {
-
-
-        model.addAttribute("courseId", courseId);
-        Optional<UserFields> fields = Optional.ofNullable(fieldss);
-        Optional<String> query = Optional.ofNullable(queryy);
-
-
-        try {
-            List<User> users = userServiceApi.searchWithFieldsAndRoleAndStatusEnablity(fields,
-                    query,
-                    Optional.of(Roles.TUTOR),
-                    Optional.of(true));
-
-            if (users == null) throw new Exception(" no users found ");
-
-            if (users.isEmpty()) throw new Exception(" no users found ");
-            if (users.size() == 0) {
-                throw new Exception(" no users found ");
-            }
-            model.addAttribute("listUser", users);
-        } catch (Exception e) {
-            e.printStackTrace();
-            model.addAttribute("error", " some thing went wrong " + e.getMessage());
-        }
-        return "assign-tutor";
-    }
-
-    @GetMapping("/assign-tutor-fin/{courseId}/{tutorId}")
-    public String assignTutor(
-            @PathVariable("courseId") Long courseId,
-            @PathVariable("tutorId") Long tutorId,
-            Model model,
-            RedirectAttributes redirectAttributes
-
-    ) {
-
-
-        try {
+            Optional<Course> byId = courseRepository.findById(courseId);
+            if (byId.isPresent()) {
+                Course course = byId.get();
+            }else throw new Exception("course not find");
+            Optional<User> byId1 = userRepository.findById(tutorId);
+            if (byId1.isPresent()){
+                User user = byId1.get();
+            }else throw new Exception("tutor not find");
             adminServiceApi.assignTutorToCourse(
                     courseId,
                     tutorId
             );
-
-
-            redirectAttributes.addFlashAttribute("success", "adding tutor was successful");
-            return "redirect:/admin/edit-course/{courseId}";
         } catch (Exception e) {
             e.printStackTrace();
-            redirectAttributes.addFlashAttribute("err", " some thing went wrong " + e.getMessage());
-            return "redirect:/admin/assign-tutor/{courseId}";
         }
     }
 }

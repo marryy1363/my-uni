@@ -4,6 +4,7 @@ import com.fara.demo.service.impl.ApplicationUserDetailsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
@@ -49,9 +50,10 @@ public class ApplicationWebSecurityConfig extends WebSecurityConfigurerAdapter {
         http
                 .csrf().disable()
                 .authorizeRequests()
-                .mvcMatchers("/**", "/index", "/register/**", "index", "/get-ajax").permitAll()
+                .mvcMatchers(HttpMethod.GET,"/**","/admin/**", "/index", "/register/**", "index", "/get-ajax").permitAll()
+                .mvcMatchers(HttpMethod.POST,"/tutor/**","/**","/admin/**", "/index", "/register/**", "index", "/get-ajax").permitAll()
                 .anyRequest()
-                .authenticated();
+                .permitAll();
 
     }
 

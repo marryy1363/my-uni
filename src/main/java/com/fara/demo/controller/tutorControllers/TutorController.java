@@ -27,7 +27,7 @@ import java.util.Optional;
 
 @Controller
 @RequestMapping("/tutor")
-@PreAuthorize("hasRole('ROLE_TUTOR')")
+//@PreAuthorize("hasRole('ROLE_TUTOR')")
 public class TutorController {
 
     private final CourseRepository courseRepository;
@@ -126,19 +126,19 @@ public class TutorController {
 
     //    ???????????????????????????????????????????????????????????????????????
     @PostMapping("edit-exams/{id}")
-    String editExam(
+    void editExam(
             @PathVariable("id") Long id,
             @RequestParam("title") String title,
             @RequestParam("brief") String brief,
             @RequestParam("timeInMinutes") Integer timeInMinutes,
-            @RequestParam("examDate") String examDate,
-            Model model
+            @RequestParam("examDate") String examDate
+
     ) {
 
         Optional<Exam> byId = examRepository.findById(id);
         if (byId.isEmpty()) throw new IllegalStateException("exam not found");
         Exam exam = byId.get();
-        model.addAttribute("exam", exam);
+
 
         try {
 
@@ -151,25 +151,20 @@ public class TutorController {
             );
 
 
-            model.addAttribute("success", "sccessfully editted exam ");
-            return "teacher/edit-exam";
-
         } catch (Exception e) {
             e.printStackTrace();
-            model.addAttribute("error", "something went wrong " + e.getMessage());
-            return "teacher/edit-exam";
+
         }
     }
 
     @PostMapping("create-exams")
-    String makeNewExam(
+    void makeNewExam(
             @RequestParam("courseId") Long courseId,
             @RequestParam("title") String title,
             @RequestParam("brief") String brief,
             @RequestParam("timeInMinutes") Integer timeInMinutes,
-            @RequestParam("examDate") String examDate,
-            Model model,
-            RedirectAttributes redirectAttributes
+            @RequestParam("examDate") String examDate
+
     ) {
         try {
 
@@ -180,32 +175,10 @@ public class TutorController {
                     timeInMinutes,
                     examDate
             );
-            redirectAttributes.addFlashAttribute("success", "exam " + title + " created successfully ");
 
-//            model.addAttribute("exam", exam);
-            return "redirect:/tutor";
         } catch (Exception e) {
             e.printStackTrace();
-            redirectAttributes.addFlashAttribute("errors", "something went wrong " + e.getMessage());
-            return "redirect:/tutor";
-        }
-    }
 
-
-    @GetMapping("new-course-exam/{id}")
-    String createExam(
-            @PathVariable("id") Long id,
-            Model model) {
-        try {
-            Optional<Course> byId = courseRepository.findById(id);
-            if (byId.isEmpty()) throw new IllegalStateException("course not found");
-            Course course = byId.get();
-            model.addAttribute("course", course);
-            return "teacher/create-exam";
-        } catch (Exception e) {
-            e.printStackTrace();
-            model.addAttribute("errors", "something went wrong " + e.getMessage());
-            return "teacher/create-exam";
         }
     }
 
@@ -341,15 +314,15 @@ public class TutorController {
     }
 
     @PostMapping("new-multi-option/{examId}")
-    String postCreateMultiOptionQuestionForExam(
+    ExamQuestionsPoints postCreateMultiOptionQuestionForExam(
             @PathVariable("examId") Long examId,
             @RequestParam("title") String title,
             @RequestParam("points") Integer points,
             @RequestParam("prompt") String prompt,
             @RequestParam("option") List<String> option,
-            @RequestParam("answer") String answer,
-            Model model
-    ) {
+            @RequestParam("answer") String answer
+
+            ) {
 
         System.out.println(
                 examId + "-" +
@@ -370,48 +343,36 @@ public class TutorController {
                     answer
             );
 
-            model.addAttribute("success", "created multi option question number " + multiOptionQuestion.getId());
+            return multiOptionQuestion;
 
         } catch (IllegalStateException e) {
             e.printStackTrace();
-            model.addAttribute("err", "something went wrong " + e.getMessage());
-        } catch (Exception e) {
-            e.printStackTrace();
-            model.addAttribute("error", "something went wrong " + e.getMessage());
+
         }
 
-        model.addAttribute("examId", examId);
-        return "teacher/new-multi-option";
+
+        return null;
     }
 
-    //            '/new-essay-question/{examId}'
-    @GetMapping("new-essay-question/{examId}")
-    String createEssayQuestionForExam(
-            @PathVariable("examId") Long examId,
-            Model model) {
-        model.addAttribute("examId", examId);
-        return "teacher/new-essay-question";
-    }
+
 
     @PostMapping("new-essay-question/{examId}")
-    String postCreateEssayQuestionForExam(
+    ExamQuestionsPoints postCreateEssayQuestionForExam(
             @PathVariable("examId") Long examId,
             @RequestParam("title") String title,
             @RequestParam("points") Integer points,
-            @RequestParam("prompt") String prompt,
-            Model model) {
+            @RequestParam("prompt") String prompt
+           ) {
         try {
             ExamQuestionsPoints newEssayQuestion = questionServiceApi.createNewEssayQuestion(title,
                     points,
                     prompt, examId);
-            model.addAttribute("success", "question successfully created question " + newEssayQuestion.getBaseQuestion().getTitle());
+            return newEssayQuestion;
         } catch (IllegalStateException e) {
-            model.addAttribute("err", "something went wrong " + e.getMessage());
-        } catch (Exception e) {
-            model.addAttribute("error", "something went wrong " + e.getMessage());
+            e.printStackTrace();
         }
-        model.addAttribute("examId", examId);
-        return "teacher/new-essay-question";
+
+        return null;
     }
 
     ///edit-question/152
@@ -474,23 +435,21 @@ public class TutorController {
     private final ExamQuestionPointsServiceApi examQuestionPointsServiceApi;
 
     //                        <a class=" text-danger " th:href="@{'/tutor/delete-question/' +${question.baseQuestion.id}}">delete</a>
-    @GetMapping("delete-question/{pqid}")
-    String deleteQuestionPointed(
-            @PathVariable("pqid") Long pqid,
-            RedirectAttributes redirectAttributes,
-            Model model
+    @DeleteMapping("delete-question/{pqid}")
+    void deleteQuestionPointed(
+            @PathVariable("pqid") Long pqid
+
 
     ) {
         Long examId = 0L;
         try {
             examId = examQuestionPointsServiceApi.findAndDeletePointedQuestionAndGiveExamId(pqid);
-            redirectAttributes.addFlashAttribute("success", "successfully removed question");
+
 
         } catch (Exception e) {
             e.printStackTrace();
-            redirectAttributes.addFlashAttribute("errors", "something went wrong " + e.getMessage());
+
         }
-        return "redirect:/tutor/edit-exam/" + examId;
 
     }
 

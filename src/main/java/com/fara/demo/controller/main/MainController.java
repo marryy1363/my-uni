@@ -22,17 +22,17 @@ public class MainController {
 //        return "register";
 //    }
 
-    @GetMapping("/login")
-    public String login() {
-        return "login";
-    }
+//    @GetMapping("/login")
+//    public String login() {
+//        return "login";
+//    }
 
 
 
     UserServiceApi userServiceApi;
 
     @PostMapping("/register")
-    public User addPerson(@RequestBody User user) {
+    public User addPerson(@RequestBody User user) throws Exception {
 
         try {
             userServiceApi.preRegister(
@@ -46,15 +46,16 @@ public class MainController {
                    );
         } catch (Exception e) {
             e.printStackTrace();
+            throw new Exception("something went wrong"+e.getMessage());
         }
 
         return user;
     }
 
-    @GetMapping("/403")
-    public String get403() {
-        return "403";
-    }
+//    @GetMapping("/403")
+//    public String get403() {
+//        return "403";
+//    }
 
 
 }
